@@ -2,7 +2,7 @@ def add_options(options, **kwargs):
     """
     Args:
     
-    options (list): list of strings containing accessibility features to be applied
+    options (str or list): list of strings containing accessibility features to be applied
 
     **kwargs: keyword arguments for each of the accessibility options
 
