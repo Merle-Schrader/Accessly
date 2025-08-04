@@ -1,11 +1,16 @@
 from Accessly import register_feature
+from Accessly import config
 import matplotlib.pyplot as plt
 from matplotlib.colors import to_rgb, to_hex
 import colorsys
 
 def apply(cb_type):
-    def recolor_figure(event):
-        fig = event.canvas.figure
+    """
+    Registers a colorblind accessibility hook that recolors problematic
+    plot lines before rendering via plt.show().
+    """
+    def recolor_current_figure():
+        fig = plt.gcf()
         for ax in fig.axes:
             for line in ax.get_lines():
                 color = line.get_color()
@@ -13,21 +18,23 @@ def apply(cb_type):
                     rgb = to_rgb(color)
                     if is_problematic(rgb, cb_type):
                         new_color = shift_color(rgb, cb_type)
+                        print(f"[Colorblind] Adjusted {color} → {new_color}")
                         line.set_color(new_color)
-                except Exception:
-                    pass  # non-standard color or error
+                        line.set_linewidth(5)  # optional: visual cue
+                except Exception as e:
+                    print(f"[Colorblind] Failed to recolor: {e}")
 
-    plt.gcf().canvas.mpl_connect("draw_event", recolor_figure)
+    config.show_hooks.append(recolor_current_figure)
 
 
 def is_problematic(rgb, cb_type):
     r, g, b = rgb
-    if cb_type == "protanopia":       # red-weak
-        return r > g and r > b
-    elif cb_type == "deuteranopia":   # green-weak
-        return g > r and g > b
-    elif cb_type == "tritanopia":     # blue-weak
-        return b > r and b > g
+    if cb_type == "protanopia":
+        return r > g and r > b  # red-heavy
+    elif cb_type == "deuteranopia":
+        return g > r and g > b  # green-heavy
+    elif cb_type == "tritanopia":
+        return b > r and b > g  # blue-heavy
     return False
 
 
@@ -35,16 +42,16 @@ def shift_color(rgb, cb_type):
     r, g, b = rgb
     h, l, s = colorsys.rgb_to_hls(r, g, b)
 
-    # shift hue from problematic region
     if cb_type == "protanopia":
-        h = (h + 0.1) % 1.0  # move red to yellow
+        h = (h + 0.25) % 1.0  # shift red → yellow
     elif cb_type == "deuteranopia":
-        h = (h - 0.1) % 1.0  # move green to blue
+        h = (h - 0.25) % 1.0  # shift green → blue
     elif cb_type == "tritanopia":
-        h = (h + 0.15) % 1.0  # move blue to green
+        h = (h + 0.30) % 1.0  # shift blue → green
 
     r_new, g_new, b_new = colorsys.hls_to_rgb(h, l, s)
     return to_hex((r_new, g_new, b_new))
 
 
 register_feature("colorblind", apply)
+

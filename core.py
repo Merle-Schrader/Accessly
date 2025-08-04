@@ -23,6 +23,7 @@ def configure(**kwargs):
     for name, handler in config.registered_features.items():
         if name in kwargs and kwargs[name]:
             handler(kwargs[name])  # call apply function
+            print(f"Calling handler for {name} with value: {kwargs[name]}")
 
     _monkey_patch_matplotlib()
 
@@ -36,10 +37,14 @@ def register_feature(name, handler_func):
 
 
 def _monkey_patch_matplotlib():
-    """
-    Monkey-patches matplotlib's show() to trigger modifications.
-    """
     def patched_show(*args, **kwargs):
+        # Call all registered show hooks before actually showing
+        for hook in config.show_hooks:
+            try:
+                hook()
+            except Exception as e:
+                print(f"[accessly] Warning: show hook failed: {e}")
         _original_show(*args, **kwargs)
 
     plt.show = patched_show
+
