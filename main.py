@@ -17,8 +17,6 @@ def add_options(options, **kwargs):
             raise ValueError('Could not find "' + options + '" in the accessibility options. Please consider adding it!')
 
     # If there are multiple options:
-    elif type(options) != list:
-        raise TypeError('Accessibility options should be a string or a list of strings!')
     elif type(options) == list:
         for option in options:
             if type(option) != str:
@@ -30,3 +28,6 @@ def add_options(options, **kwargs):
             except:
                 raise ValueError('Could not find "' + option + '" in the accessibility options. Please consider adding it!')
 
+    # If it is neither a string or a list of strings:      
+    else:
+        raise TypeError('Accessibility options should be a string or a list of strings!')
