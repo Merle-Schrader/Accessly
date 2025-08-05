@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 
 def apply(params):
     """
-    Adds 'L' and 'R' labels to plots for distinguishing between the left and right side of the plot.
+    Add alt-text to plots on the top or bottom of the plot.
     Parameters:
-        position (str): 'top' or 'bottom'
+        position (str): 'top' or 'bottom' (default: 'bottom')
+        description (str): alt-text added to the plot (default: 'Please add alt-text using the description keyword.')
         alpha (float): label transparency (default: 1.0)
         color (str): label color (default: black)
         fontsize (int): font size (default: 14)
