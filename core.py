@@ -17,6 +17,11 @@ def configure(**kwargs):
     if not _loaded_accessibilities:
         load_all_accessibility_features()  # auto-import modules
         _loaded_accessibilities = True
+        
+    # make sure we can run accessly.configure() to reset/disable accessibility features in ipynb notebooks
+    config.show_hooks.clear() # removes all previously registered draw/save hooks
+    config.settings.clear() # clears old flags
+    # reapplying only features in kwargs ensures: 1. features you want are applied but 2. features you omit are disabled.
 
     config.settings.update(kwargs)
 
