@@ -11,7 +11,7 @@ def apply(params):
         color (str): label color (default: black)
         fontsize (int): font size (default: 14)
     """
-    position = params if isinstance(params, str) else params.get("position", "top")
+    position = params if isinstance(params, str) else params.get("position", "bottom")
     description = params.get("description", "Please add alt-text using the description keyword.")
     alpha = params.get("alpha", 1.0)
     color = params.get("color", "black")
@@ -19,7 +19,6 @@ def apply(params):
 
     def add_alttext():
         fig = plt.gcf()
-        fig.subplots_adjust(bottom=0.3)
         for ax in fig.axes:
 
             y_pos = 1.05 if position == "top" else -0.1
@@ -29,7 +28,7 @@ def apply(params):
                     fontsize=fontsize, fontname="Arial",
                     color=color, alpha=alpha, ha="left", va=va,
                     transform=ax.transAxes, clip_on=False)
-            print("Alt text: " + str(description))
+            print("\nAlt text: " + str(description))
 
 
 
