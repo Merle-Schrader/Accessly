@@ -35,16 +35,26 @@ def register_feature(name, handler_func):
     """
     config.registered_features[name] = handler_func
 
-
 def _monkey_patch_matplotlib():
-    def patched_show(*args, **kwargs):
-        # Call all registered show hooks before actually showing
+    def run_show_hooks():
         for hook in config.show_hooks:
             try:
                 hook()
             except Exception as e:
                 print(f"[accessly] Warning: show hook failed: {e}")
+
+    # Patch plt.show()
+    def patched_show(*args, **kwargs):
+        run_show_hooks()
         _original_show(*args, **kwargs)
 
     plt.show = patched_show
 
+    # Patch plt.savefig()
+    original_savefig = plt.savefig
+
+    def patched_savefig(*args, **kwargs):
+        run_show_hooks()
+        return original_savefig(*args, **kwargs)
+
+    plt.savefig = patched_savefig
