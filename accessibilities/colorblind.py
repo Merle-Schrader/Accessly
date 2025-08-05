@@ -1,162 +1,123 @@
 from accessly import register_feature, config
 import matplotlib.pyplot as plt
 from matplotlib.colors import to_rgb, to_hex, to_rgba
+from matplotlib import cm
+import colorsys
+from matplotlib.colors import Colormap
+import hashlib
 import numpy as np
 
 def apply(cb_options):
     """
-    Registers a colorblind accessibility hook that recolors problematic
-    plot elements before rendering.
-
-    Args:
-        cb_options (dict): {
-            "types": str or list of str  (e.g., "redgreen")
-        }
+    Apply colorblind-safe remapping using specified colormaps.
     """
-    if not isinstance(cb_options, dict):
-        print("[Colorblind] WARNING: Expected dict, got", type(cb_options))
-        return
-
-    cb_types = cb_options.get("types", [])
+    cb_types = cb_options.get("types", []) if isinstance(cb_options, dict) else []
     if isinstance(cb_types, str):
         cb_types = [cb_types]
+
+    colormap = _get_colormap(cb_types)
+    print(f"[Colorblind] Using colormap: {colormap.name}")
 
     def recolor_current_figure():
         fig = plt.gcf()
         for ax in fig.axes:
             # Lines
             for line in ax.get_lines():
-                _try_recolor(line.set_color, line.get_color(), cb_types)
+                _try_recolor(line.set_color, line.get_color(), colormap)
 
-            # Scatter
+            # Scatter: facecolors and edgecolors
             for col in ax.collections:
                 try:
-                    facecolors = col.get_facecolors()
-                    if facecolors is not None and len(facecolors) > 0:
-                        new_colors = []
-                        for rgba in facecolors:
-                            rgb = rgba[:3]
-                            new_rgb = remap_rgb_to_safe(rgb, cb_types)
-                            new_colors.append(to_rgba(new_rgb, alpha=rgba[3]))
-                        col.set_facecolors(new_colors)
-
-                    edgecolors = col.get_edgecolors()
-                    if edgecolors is not None and len(edgecolors) > 0:
-                        new_edges = []
-                        for rgba in edgecolors:
-                            rgb = rgba[:3]
-                            new_rgb = remap_rgb_to_safe(rgb, cb_types)
-                            new_edges.append(to_rgba(new_rgb, alpha=rgba[3]))
-                        col.set_edgecolors(new_edges)
-
+                    if hasattr(col, "get_facecolors"):
+                        fc = col.get_facecolors()
+                        if fc is not None and len(fc) > 0:
+                            col.set_facecolors([
+                                to_rgba(_map_to_colormap(c[:3], colormap), alpha=c[3]) for c in fc
+                            ])
+                    if hasattr(col, "get_edgecolors"):
+                        ec = col.get_edgecolors()
+                        if ec is not None and len(ec) > 0:
+                            col.set_edgecolors([
+                                to_rgba(_map_to_colormap(c[:3], colormap), alpha=c[3]) for c in ec
+                            ])
                 except Exception as e:
                     print(f"[Colorblind] Scatter recolor failed: {e}")
 
-            # Bars/histograms
+            # Bars / patches
             for patch in ax.patches:
-                _try_recolor(patch.set_facecolor, patch.get_facecolor(), cb_types)
+                _try_recolor(patch.set_facecolor, patch.get_facecolor(), colormap)
 
-            # Filled areas
-            for poly in ax.collections:
-                if hasattr(poly, "get_facecolors"):
-                    try:
-                        fc = poly.get_facecolors()
-                        if fc is not None and len(fc) > 0:
-                            new_colors = []
-                            for rgba in fc:
-                                rgb = rgba[:3]
-                                new_rgb = remap_rgb_to_safe(rgb, cb_types)
-                                new_colors.append(to_rgba(new_rgb, alpha=rgba[3]))
-                            poly.set_facecolors(new_colors)
-                    except Exception as e:
-                        print(f"[Colorblind] fill_between recolor failed: {e}")
-
-            # Error bars
+            # Error bars, containers
             if hasattr(ax, "containers"):
                 for container in ax.containers:
                     for artist in container:
                         if hasattr(artist, "get_facecolor"):
-                            _try_recolor(artist.set_facecolor, artist.get_facecolor(), cb_types)
+                            _try_recolor(artist.set_facecolor, artist.get_facecolor(), colormap)
 
             # Legend
             legend = ax.get_legend()
             if legend:
                 try:
-                    handles, _ = ax.get_legend_handles_labels()
+                    handles, labels = ax.get_legend_handles_labels()
                     for handle in handles:
                         if hasattr(handle, "get_color"):
-                            _try_recolor(handle.set_color, handle.get_color(), cb_types)
+                            _try_recolor(handle.set_color, handle.get_color(), colormap)
                         elif hasattr(handle, "get_facecolor"):
-                            _try_recolor(handle.set_facecolor, handle.get_facecolor(), cb_types)
-
-                    props = {
-                        "loc": getattr(legend, "_loc", "best"),
-                        "frameon": legend.get_frame_on(),
-                        "title": legend.get_title().get_text(),
-                        "ncol": getattr(legend, "_ncol", 1),
-                        "fontsize": legend.prop.get_size() if hasattr(legend, "prop") else None,
-                    }
-
+                            _try_recolor(handle.set_facecolor, handle.get_facecolor(), colormap)
+                    
                     legend.remove()
-                    ax.legend(handles=handles, **{k: v for k, v in props.items() if v is not None})
-
+                    ax.legend(handles, labels)
                 except Exception as e:
                     print(f"[Colorblind] Legend recolor failed: {e}")
 
     config.show_hooks.append(recolor_current_figure)
 
+# Truncate colormap helper
+def _truncate_colormap(cmap: Colormap, minval=0.0, maxval=1.0, n=256):
+    new_colors = cmap(np.linspace(minval, maxval, n))
+    return cm.colors.ListedColormap(new_colors)
 
-def _try_recolor(setter_func, original_color, cb_types):
+# Helper to determine the appropriate colormap
+def _get_colormap(cb_types):
+    if "redgreen" in cb_types:
+        return cm.get_cmap("plasma")
+    elif "blueyellow" in cb_types:
+        return _truncate_colormap(cm.get_cmap("brg"), 0.5, 1.0)  # Right half only
+    return cm.get_cmap("plasma")  # default
+
+def _try_recolor(setter_func, color, colormap):
     try:
-        rgb = to_rgb(original_color)
-        new_rgb = remap_rgb_to_safe(rgb, cb_types)
-        hex_new = to_hex(new_rgb)
-        # if hex_new != to_hex(rgb):
-        #     print(f"[Colorblind] Adjusted {to_hex(rgb)} → {hex_new}")
-        setter_func(hex_new)
+        hex_color = to_hex(color)
+
+        if hex_color in _seen_colors:
+            return
+
+        rgb = to_rgb(color)
+        new_hex = _map_to_colormap(rgb, colormap)
+        _seen_colors.add(new_hex)
+
+        if hex_color != new_hex:
+            print(f"[Colorblind] Adjusted {hex_color} → {new_hex}")
+        setter_func(new_hex)
+
     except Exception as e:
-        print(f"[Colorblind] Failed to recolor: {e}")
+        print(f"[Colorblind] Recolor failed: {e}")
 
 
-def remap_rgb_to_safe(rgb, cb_types):
-    rgb_vec = np.array(rgb)
-    for cb in cb_types:
-        basis = SAFE_RGB_BASES.get(cb)
-        if basis is not None:
-            # Recombine R, G, B with new anchor vectors
-            new_rgb = (
-                rgb_vec[0] * basis[:, 0] +
-                rgb_vec[1] * basis[:, 1] +
-                rgb_vec[2] * basis[:, 2]
-            )
-            return np.clip(new_rgb, 0, 1)
-    return rgb_vec
+_seen_colors = set()
 
+def _map_to_colormap(rgb, colormap):
+    r, g, b = rgb
+    hex_code = to_hex((r, g, b))
 
+    # Hash RGB to a consistent scalar between 0–1
+    hash_digest = hashlib.md5(hex_code.encode()).hexdigest()
+    hash_int = int(hash_digest[:8], 16)
+    norm = (hash_int % 1000000) / 1_000_000.0
 
-# Define safe color basis (rows = R, G, B projections)
-# For red-green colorblindness, map:
-# - Red → Sand (#F4A460)
-# - Green → Blue (#4682B4)
-# - Blue → Gray (#A9A9A9)
+    # Get RGB from colormap
+    r_new, g_new, b_new, _ = colormap(norm)
+    return to_hex((r_new, g_new, b_new))  # no prefix
 
-SAFE_RGB_BASES = {
-    "redgreen": np.array([
-        [244,  70, 169],  # R
-        [164, 130, 169],  # G
-        [ 96, 180, 169],  # B
-    ], dtype=float).T / 255.0,
-    "protanopia": np.array([
-        [244,  70, 169],
-        [164, 130, 169],
-        [ 96, 180, 169],
-    ]) / 255.0,
-    "deuteranopia": np.array([
-        [244,  70, 169],
-        [164, 130, 169],
-        [ 96, 180, 169],
-    ]) / 255.0
-}
-
-# Register the colorblind feature with Accessly
+# Register with accessly
 register_feature("colorblind", apply)
