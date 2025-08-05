@@ -17,6 +17,7 @@ def apply(params):
     alpha = params.get("alpha", 1.0)
     color = params.get("color", "black")
     fontsize = params.get("fontsize", 14)
+    fontname = params.get("fontname", "Arial")
 
     def add_alttext():
         fig = plt.gcf()
@@ -26,7 +27,7 @@ def apply(params):
             va = "bottom" if position == "top" else "top"
 
             ax.text(0.01, y_pos, "Alt text: " + str(description),
-                    fontsize=fontsize, fontname="Arial",
+                    fontsize=fontsize, fontname=fontname,
                     color=color, alpha=alpha, ha="left", va=va,
                     transform=ax.transAxes, clip_on=False)
             print("\nAlt text: " + str(description))
