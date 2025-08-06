@@ -7,6 +7,6 @@ name = "accessly"
 version = "0.0.1"
 
 dependencies = [
-  "matplotlib",
-  "numpy
+  #"matplotlib",
+  #"numpy
 ]
