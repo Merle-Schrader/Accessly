@@ -2,6 +2,7 @@ from accessly import register_feature, config
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from pyfonts import load_google_font
+import os
 
 def apply(lf_options):
     """
@@ -12,6 +13,8 @@ def apply(lf_options):
     Args:
         lf_options (dict): {
             "font": str  (e.g., "Comic Sans MS")
+            "bold": bool (toggle bold)
+
         }
     """
     if not isinstance(lf_options, dict):
@@ -19,19 +22,28 @@ def apply(lf_options):
         return
 
     lf_font = lf_options.get("font", [])
-    if isinstance(lf_font, str):
-        lf_font = [lf_font]
-        # TO DO - make it so only one string accepted
+    if isinstance(lf_font, list):
+        lf_font = lf_font[0]
+        print("[LegibleFont] WARNING: Expected single font. Only using first list entry")
+
+    if isinstance(lf_font,str):
+        available_fonts_ext = [os.path.splitext(os.path.basename(i)) for i in fm.findSystemFonts(fontpaths=None, fontext='ttf')]
+        available_fonts = [i[0] for i in available_fonts_ext]
+
+        if lf_font not in available_fonts:
+            try:
+                #maybe it's a google font?
+                g_font = load_google_font(lf_font)
+                fm.fontManager.addfont(g_font.get_file())
+            except:
+                #(it wasn't)
+                print("[LegibleFont] WARNING: Selected ",lf_font, " but this font is not available!")
 
     def font_update_current_figure():
         fig = plt.gcf()
-
-
-        print(plt.rcParams["font.sans-serif"][0])
-        print(plt.rcParams["font.monospace"][0])
         plt.rcParams["font.family"] = "sans-serif"
-        plt.rcParams["font.sans-serif"] = ["Arial"]
-
+        plt.rcParams["font.sans-serif"] = lf_font #assumes sans-serif for now
+        print("[LegibleFont] Using font: ",lf_font)
 
 
 
