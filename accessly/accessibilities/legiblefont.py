@@ -37,7 +37,7 @@ def apply(params):
             #(it wasn't)
             print("[LegibleFont] WARNING: Selected ",lf_font, " but this font is not available!")
 
-    def font_update_current_figure():
+    def font_update_current_figure(*args, **kwargs):
         fig = plt.gcf()
         #use rcParams to set font of ALL text
         plt.rcParams["font.weight"] = lf_weight

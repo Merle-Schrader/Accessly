@@ -19,7 +19,17 @@ def apply(params):
     fontsize = params.get("fontsize", 14)
     fontname = params.get("fontname", "Arial")
 
-    def add_alttext():
+    def add_alttext(*args, **kwargs):
+        if 'metadata' not in kwargs:
+            print('============================================================================')
+            print('WARNING: Alt-text is selected, but no Description was added to the metadata!')
+            print('============================================================================')
+        else:
+            if 'Description' not in kwargs['metadata']:
+                print('============================================================================')
+                print('WARNING: Alt-text is selected, but no Description was added to the metadata!')
+                print('============================================================================')
+
         fig = plt.gcf()
         for ax in fig.axes:
 
