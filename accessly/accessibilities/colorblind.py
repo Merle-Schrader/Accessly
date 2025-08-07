@@ -18,7 +18,7 @@ def apply(cb_options):
     colormap = _get_colormap(cb_types)
     print(f"[Colorblind] Using colormap: {colormap.name}")
 
-    def recolor_current_figure():
+    def recolor_current_figure(*args, **kwargs):
         fig = plt.gcf()
         for ax in fig.axes:
             # Lines

@@ -16,7 +16,7 @@ def apply(params):
     color = params.get("color", "black")
     fontsize = params.get("fontsize", 14)
 
-    def add_lr_labels():
+    def add_lr_labels(*args, **kwargs):
         fig = plt.gcf()
         for ax in fig.axes:
 
