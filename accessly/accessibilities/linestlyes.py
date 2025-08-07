@@ -21,18 +21,48 @@ def apply(line_options):
         print("[Linestyles] WARNING: Expected dict, got", type(line_options))
         return
 
-    line_types = line_options.get("types", [])
-    if isinstance(line_types, str):
-        line_types = [line_types]
+    line_type = string(line_options.get("types", []))
+    #if isinstance(line_types, str):
+    #    line_types = [line_types]
 
     def restyle_current_figure():
         fig = plt.gcf()
         for ax in fig.axes:
             # Lines
-            for line in ax.get_lines():
-                _try_recolor(line.set_color, line.get_color(), line_types)
+            lines = ax.get_lines()
+            if len(lines) == 0:
+                raise Exception("[Linestyles] No lines found")
+            elif len(lines) > 14:
+                raise Exception("[Linestyles] Too many lines found, unable to make accessible")
+            elif len(lines) <= 4:
+                styles = ['solid', 'dotted', 'dashed', 'dashdot']
+            else:
+                styles = [ 
+                    'solid',
+                    (0, (1, 10)),
+                    (0, (1, 5)),
+                    (0, (1, 1)),
+                    (5, (10, 3)),
+                    (0, (5, 10)),
+                    (0, (5, 5)),
+                    (0, (5, 1)),
+                    (0, (3, 10, 1, 10)),
+                    (0, (3, 5, 1, 5)),
+                    (0, (3, 1, 1, 1)),
+                    (0, (3, 5, 1, 5, 1, 5)),
+                    (0, (3, 10, 1, 10, 1, 10)),
+                    (0, (3, 1, 1, 1, 1, 1)),
+                    ]
 
+            for line in lines:
+                if 'bold' in line_type:
+                    line.set_linewidth( 3 )
+                if 'diff' in line_type:
+                    idx = lines.index(line)
+                    line.set_style( styles[idx] )
+                #if 'recolor' in line_type:
 
+            '''
             # Legend
             legend = ax.get_legend()
             if legend:
@@ -57,36 +87,9 @@ def apply(line_options):
 
                 except Exception as e:
                     print(f"[Colorblind] Legend recolor failed: {e}")
+            '''
 
-    config.show_hooks.append(recolor_current_figure)
-
-
-def _try_restyle(setter_func, original_style, line_types):
-    try:
-        rgb = to_rgb(original_style)
-        new_rgb = remap_rgb_to_safe(rgb, line_types)
-        # if hex_new != to_hex(rgb):
-        #     print(f"[Linestyle] Adjusted {} → {hex_new}")
-        setter_func(hex_new)
-    except Exception as e:
-        print(f"[Linetyles] Failed to restyle: {e}")
-
-
-def remap_rgb_to_safe(rgb, line_types):
-    rgb_vec = np.array(rgb)
-    for line in line_types:
-        basis = SAFE_RGB_BASES.get(line)
-        if basis is not None:
-            # Recombine R, G, B with new anchor vectors
-            new_rgb = (
-                rgb_vec[0] * basis[:, 0] +
-                rgb_vec[1] * basis[:, 1] +
-                rgb_vec[2] * basis[:, 2]
-            )
-            return np.clip(new_rgb, 0, 1)
-    return rgb_vec
-
-
+    config.show_hooks.append(restyle_current_figure)
 
 
 # Register the colorblind feature with Accessly
